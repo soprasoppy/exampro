@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, Save, Send, AlertTriangle, Lock } from "lucide-react";
@@ -32,6 +32,14 @@ interface SessionData {
 }
 
 export default function ExamSessionPage() {
+  return (
+    <Suspense>
+      <ExamSessionContent />
+    </Suspense>
+  );
+}
+
+function ExamSessionContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
   const router = useRouter();
