@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { getCertification } from "@/lib/certifications";
 import {
   Loader2, Search, Plus, Pencil, Trash2, Copy, Eye, EyeOff,
-  ChevronLeft, ChevronRight, Filter, X,
+  ChevronLeft, ChevronRight, Filter, X, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
