@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  CANDIDATE
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  OPEN_ENDED
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  TIMED_OUT
+}
+
+enum ExamStatus {
+  PENDING
+  READY
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  firstName     String
+  lastName      String
+  image         String?
+  role          Role      @default(CANDIDATE)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  createdExams  Exam[]         @relation("ExamCreator")
+  sessions      ExamSession[]
+  comments      ExamComment[]  @relation("InstructorComments")
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Exam {
+  id              String     @id @default(cuid())
+  title           String
+  description     String?
+  certification   String?    // PMP, CAPM, PgMP, RISK, AUDIT, GOOGLE, ITIL, SCRUM
+  category        String?
+  level           String?
+  duration        Int        // duree en minutes
+  numberOfQuestions Int      // nombre de questions a afficher
+  randomOrder     Boolean    @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  published       Boolean    @default(false)
+  status          ExamStatus @default(PENDING) // PENDING = en attente, READY = pret
+  passingScore    Float      @default(50) // pourcentage de reussite
+  createdById     String
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  createdBy       User           @relation("ExamCreator", fields: [createdById], references: [id])
+  questions       Question[]
+  sessions        ExamSession[]
+  comments        ExamComment[]
+
+  @@map("exams")
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  code          String?      // code_question pour import
+  examId        String
+  type          QuestionType
+  text          String
+  choices       Json?        // tableau de choix: [{label: "A", text: "..."}]
+  correctAnswer String       // "A", "A,B", "true", ou texte
+  explanation   String?
+  category      String?
+  difficulty    String?      @default("medium") // easy, medium, hard
+  tags          String[]     @default([])       // etiquettes: "Reseau", "Securite", etc.
+  active        Boolean      @default(true)     // masquage temporaire sans suppression
+  points        Float        @default(1)
+  orderIndex    Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  exam          Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers       SessionAnswer[]
+
+  @@map("questions")
+}
+
+model ExamSession {
+  id              String        @id @default(cuid())
+  userId          String
+  examId          String
+  status          SessionStatus @default(IN_PROGRESS)
+  questionOrder   Json          // tableau d'IDs de questions dans l'ordre fige
+  startedAt       DateTime      @default(now())
+  endsAt          DateTime      // heure de fin calculee
+  submittedAt     DateTime?
+  score           Float?
+  totalPoints     Float?
+  correctCount    Int?
+  totalQuestions  Int?
+
+  user            User           @relation(fields: [userId], references: [id])
+  exam            Exam           @relation(fields: [examId], references: [id])
+  answers         SessionAnswer[]
+  comments        ExamComment[]
+
+  @@map("exam_sessions")
+}
+
+model SessionAnswer {
+  id          String   @id @default(cuid())
+  sessionId   String
+  questionId  String
+  answer      String?  // reponse du candidat
+  isCorrect   Boolean?
+  savedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id])
+
+  @@unique([sessionId, questionId])
+  @@map("session_answers")
+}
+
+model ExamComment {
+  id        String       @id @default(cuid())
+  examId    String
+  sessionId String?      // null = commentaire general, rempli = commentaire sur une session candidat
+  userId    String
+  type      String       // COMMENT, REMARK, SUGGESTION
+  content   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  exam      Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  session   ExamSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User         @relation("InstructorComments", fields: [userId], references: [id])
+
+  @@map("exam_comments")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
