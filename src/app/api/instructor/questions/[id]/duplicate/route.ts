@@ -23,7 +23,7 @@ export async function POST(
       examId: original.examId,
       type: original.type,
       text: `[Copie] ${original.text}`,
-      choices: original.choices as object[] | null,
+      choices: original.choices ?? undefined,
       correctAnswer: original.correctAnswer,
       explanation: original.explanation,
       category: original.category,
