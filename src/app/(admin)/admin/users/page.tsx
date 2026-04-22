@@ -24,6 +24,10 @@ export default function UsersPage() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "CANDIDATE" });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [resetUser, setResetUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -56,6 +60,26 @@ export default function UsersPage() {
       body: JSON.stringify({ active: !user.active }),
     });
     loadUsers();
+  }
+
+  async function resetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resetUser || newPassword.length < 6) return;
+    setResetting(true);
+    const res = await fetch(`/api/users/${resetUser.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: newPassword }),
+    });
+    setResetting(false);
+    if (res.ok) {
+      setResetSuccess(true);
+      setTimeout(() => {
+        setResetUser(null);
+        setNewPassword("");
+        setResetSuccess(false);
+      }, 2000);
+    }
   }
 
   const filtered = users.filter((u) =>
@@ -95,9 +119,12 @@ export default function UsersPage() {
                 <td className="px-4 py-3"><Badge variant={user.role === "ADMIN" ? "info" : "default"}>{user.role}</Badge></td>
                 <td className="px-4 py-3"><Badge variant={user.active ? "success" : "danger"}>{user.active ? "Actif" : "Inactif"}</Badge></td>
                 <td className="px-4 py-3 text-sm">{user._count.sessions}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 flex gap-1">
                   <Button variant="ghost" size="sm" onClick={() => toggleActive(user)}>
                     {user.active ? "Desactiver" : "Activer"}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setResetUser(user); setNewPassword(""); setResetSuccess(false); }}>
+                    Reinit. MDP
                   </Button>
                 </td>
               </tr>
@@ -105,6 +132,31 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal open={!!resetUser} onClose={() => setResetUser(null)} title="Reinitialiser le mot de passe">
+        {resetUser && (
+          <form onSubmit={resetPassword} className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Nouveau mot de passe pour <span className="font-medium">{resetUser.firstName} {resetUser.lastName}</span> ({resetUser.email})
+            </p>
+            <Input
+              id="newpwd"
+              label="Nouveau mot de passe"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Minimum 6 caracteres"
+              required
+            />
+            {resetSuccess && (
+              <p className="text-sm text-emerald-600 font-medium">Mot de passe reinitialise avec succes !</p>
+            )}
+            <Button type="submit" loading={resetting} disabled={newPassword.length < 6} className="w-full">
+              Reinitialiser
+            </Button>
+          </form>
+        )}
+      </Modal>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Nouvel utilisateur">
         <form onSubmit={createUser} className="space-y-4">

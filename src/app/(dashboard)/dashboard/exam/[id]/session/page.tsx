@@ -49,6 +49,8 @@ function ExamSessionContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [questionTimeRemaining, setQuestionTimeRemaining] = useState(0);
+  const [timePerQuestion, setTimePerQuestion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -128,11 +130,16 @@ function ExamSessionContent() {
         // Calculer le temps restant
         const remaining = Math.max(0, Math.floor((new Date(data.endsAt).getTime() - Date.now()) / 1000));
         setTimeRemaining(remaining);
+
+        // Timer par question : duree totale / nombre de questions
+        const perQuestion = Math.floor((data.exam.duration * 60) / data.questions.length);
+        setTimePerQuestion(perQuestion);
+        setQuestionTimeRemaining(perQuestion);
       })
       .finally(() => setLoading(false));
   }, [sessionId, router]);
 
-  // Chronometre
+  // Chronometre global
   useEffect(() => {
     if (timeRemaining <= 0 && sessionData) {
       handleSubmit();
@@ -152,6 +159,39 @@ function ExamSessionContent() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRemaining > 0]);
+
+  // Timer par question
+  useEffect(() => {
+    if (!sessionData || timePerQuestion === 0) return;
+
+    const interval = setInterval(() => {
+      setQuestionTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          // Temps ecoule pour cette question : passer a la suivante
+          if (currentIndex < sessionData.questions.length - 1) {
+            setCurrentIndex((i) => i + 1);
+            setQuestionTimeRemaining(timePerQuestion);
+          } else {
+            // Derniere question : soumettre
+            handleSubmit();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, timePerQuestion, sessionData]);
+
+  // Reinitialiser le timer question quand on change de question manuellement
+  useEffect(() => {
+    if (timePerQuestion > 0) {
+      setQuestionTimeRemaining(timePerQuestion);
+    }
+  }, [currentIndex, timePerQuestion]);
 
   // Sauvegarder une reponse
   const saveAnswer = useCallback(
@@ -241,51 +281,92 @@ function ExamSessionContent() {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-gray-100 flex flex-col overflow-hidden select-none">
-      {/* Barre superieure fixe */}
-      <header className="bg-white border-b shadow-sm px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="font-bold text-gray-900 text-lg">{sessionData.exam.title}</h1>
-          <span className="text-sm text-gray-500">
-            {t("question")} {currentIndex + 1} / {questions.length}
-          </span>
-          <span className="text-sm text-gray-500">
-            {answeredCount} / {questions.length} {t("answered").toLowerCase()}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {saving && (
-            <span className="flex items-center gap-1 text-xs text-gray-400">
-              <Save className="w-3 h-3 animate-pulse" /> {t("saving")}
-            </span>
-          )}
-
-          <div className={cn(
-            "flex items-center gap-2 font-mono text-lg font-bold px-4 py-2 rounded-lg",
-            isLastMinute ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-100 text-gray-900"
-          )}>
-            <Clock className="w-5 h-5" />
-            {formatTime(timeRemaining)}
+      {/* Barre superieure fixe - responsive */}
+      <header className="bg-white border-b shadow-sm px-3 sm:px-6 py-2 sm:py-3 shrink-0">
+        {/* Ligne 1 : titre + timers */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-bold text-gray-900 text-sm sm:text-lg truncate">{sessionData.exam.title}</h1>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>Q{currentIndex + 1}/{questions.length}</span>
+              <span>{answeredCount}/{questions.length} {t("answered").toLowerCase()}</span>
+              {saving && (
+                <span className="flex items-center gap-1 text-gray-400">
+                  <Save className="w-3 h-3 animate-pulse" />
+                </span>
+              )}
+            </div>
           </div>
 
-          {isLastMinute && (
-            <span className="flex items-center gap-1 text-xs text-red-600 font-medium">
-              <AlertTriangle className="w-4 h-4" /> {t("lastMinute")}
-            </span>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Timer par question */}
+            {timePerQuestion > 0 && (
+              <div className={cn(
+                "flex items-center gap-1 font-mono text-xs sm:text-sm font-bold px-2 sm:px-3 py-1.5 rounded-lg",
+                questionTimeRemaining <= 10 ? "bg-orange-100 text-orange-700 animate-pulse" : "bg-blue-50 text-blue-700"
+              )}>
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Q:</span>{formatTime(questionTimeRemaining)}
+              </div>
+            )}
 
-          <Button variant="danger" size="sm" onClick={() => {
-            if (confirm(t("submitConfirm"))) handleSubmit();
-          }} loading={submitting}>
-            <Send className="w-4 h-4 mr-1" /> {t("submit")}
-          </Button>
+            {/* Timer global */}
+            <div className={cn(
+              "flex items-center gap-1 font-mono text-sm sm:text-lg font-bold px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg",
+              isLastMinute ? "bg-red-100 text-red-700 animate-pulse" : "bg-gray-100 text-gray-900"
+            )}>
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+              {formatTime(timeRemaining)}
+            </div>
+
+            {isLastMinute && (
+              <AlertTriangle className="w-4 h-4 text-red-600 sm:hidden" />
+            )}
+
+            <Button variant="danger" size="sm" onClick={() => {
+              if (confirm(t("submitConfirm"))) handleSubmit();
+            }} loading={submitting} className="text-xs sm:text-sm">
+              <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline ml-1">{t("submit")}</span>
+            </Button>
+          </div>
         </div>
       </header>
 
+      {/* Navigation questions horizontale - mobile */}
+      <div className="lg:hidden bg-white border-b px-3 py-2 overflow-x-auto shrink-0">
+        <div className="flex gap-1.5">
+          {questions.map((q, i) => {
+            const isCurrent = i === currentIndex;
+            const isPast = i < currentIndex;
+            const isFuture = i > currentIndex;
+
+            return (
+              <button
+                key={q.id}
+                disabled
+                className={cn(
+                  "w-8 h-8 rounded-lg text-xs font-semibold cursor-default shrink-0",
+                  isCurrent
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : isPast && answers[q.id]
+                    ? "bg-green-100 text-green-800 border border-green-300"
+                    : isPast
+                    ? "bg-gray-200 text-gray-400"
+                    : "bg-gray-50 text-gray-300"
+                )}
+              >
+                {isFuture ? <Lock className="w-3 h-3 mx-auto" /> : i + 1}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Contenu principal */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Panneau navigation questions (gauche) */}
-        <aside className="w-56 bg-white border-r p-4 overflow-y-auto shrink-0">
+        {/* Panneau navigation questions (gauche) - desktop seulement */}
+        <aside className="hidden lg:block w-56 bg-white border-r p-4 overflow-y-auto shrink-0">
           <p className="text-sm font-semibold text-gray-700 mb-3">{t("questions")}</p>
           <div className="grid grid-cols-5 gap-1.5">
             {questions.map((q, i) => {
@@ -327,9 +408,9 @@ function ExamSessionContent() {
         </aside>
 
         {/* Zone question (centre) */}
-        <main className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm p-8">
-            <div className="flex items-center gap-2 mb-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
+          <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm p-4 sm:p-6 lg:p-8">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6">
               <Badge variant="info">{t("question")} {currentIndex + 1}</Badge>
               <Badge>
                 {currentQuestion.type === "SINGLE_CHOICE" && t("singleChoice")}
@@ -341,16 +422,16 @@ function ExamSessionContent() {
               <Badge variant="default">{currentQuestion.points} {t("pts")}</Badge>
             </div>
 
-            <p className="text-gray-900 text-lg mb-8 leading-relaxed">{currentQuestion.text}</p>
+            <p className="text-gray-900 text-sm sm:text-base lg:text-lg mb-5 sm:mb-8 leading-relaxed">{currentQuestion.text}</p>
 
             {/* QCM simple */}
             {currentQuestion.type === "SINGLE_CHOICE" && currentQuestion.choices && (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {(currentQuestion.choices as Choice[]).map((choice) => (
                   <label
                     key={choice.label}
                     className={cn(
-                      "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors",
+                      "flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors",
                       answers[currentQuestion.id] === choice.label
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:bg-gray-50"
@@ -362,10 +443,10 @@ function ExamSessionContent() {
                       value={choice.label}
                       checked={answers[currentQuestion.id] === choice.label}
                       onChange={() => handleAnswer(currentQuestion.id, choice.label)}
-                      className="text-blue-600"
+                      className="text-blue-600 mt-0.5 shrink-0"
                     />
-                    <span className="font-medium text-gray-700 mr-2">{choice.label}.</span>
-                    <span>{choice.text}</span>
+                    <span className="font-medium text-gray-700 shrink-0">{choice.label}.</span>
+                    <span className="text-sm sm:text-base">{choice.text}</span>
                   </label>
                 ))}
               </div>
@@ -373,15 +454,15 @@ function ExamSessionContent() {
 
             {/* QCM multiple */}
             {currentQuestion.type === "MULTIPLE_CHOICE" && currentQuestion.choices && (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-500 mb-2">{t("multipleAnswers")}</p>
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-xs sm:text-sm text-gray-500 mb-2">{t("multipleAnswers")}</p>
                 {(currentQuestion.choices as Choice[]).map((choice) => {
                   const selected = (answers[currentQuestion.id] || "").split(",");
                   return (
                     <label
                       key={choice.label}
                       className={cn(
-                        "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors",
+                        "flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors",
                         selected.includes(choice.label)
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:bg-gray-50"
@@ -391,10 +472,10 @@ function ExamSessionContent() {
                         type="checkbox"
                         checked={selected.includes(choice.label)}
                         onChange={() => toggleMultiple(currentQuestion.id, choice.label)}
-                        className="text-blue-600"
+                        className="text-blue-600 mt-0.5 shrink-0"
                       />
-                      <span className="font-medium text-gray-700 mr-2">{choice.label}.</span>
-                      <span>{choice.text}</span>
+                      <span className="font-medium text-gray-700 shrink-0">{choice.label}.</span>
+                      <span className="text-sm sm:text-base">{choice.text}</span>
                     </label>
                   );
                 })}
@@ -403,12 +484,12 @@ function ExamSessionContent() {
 
             {/* Vrai/Faux */}
             {currentQuestion.type === "TRUE_FALSE" && (
-              <div className="flex gap-4">
+              <div className="flex gap-3 sm:gap-4">
                 {[t("true"), t("false")].map((val, i) => (
                   <label
                     key={val}
                     className={cn(
-                      "flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border cursor-pointer transition-colors",
+                      "flex-1 flex items-center justify-center gap-2 p-3 sm:p-4 rounded-lg border cursor-pointer transition-colors",
                       answers[currentQuestion.id] === (i === 0 ? "A" : "B")
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:bg-gray-50"
@@ -421,7 +502,7 @@ function ExamSessionContent() {
                       onChange={() => handleAnswer(currentQuestion.id, i === 0 ? "A" : "B")}
                       className="text-blue-600"
                     />
-                    <span className="font-medium">{val}</span>
+                    <span className="font-medium text-sm sm:text-base">{val}</span>
                   </label>
                 ))}
               </div>
@@ -433,7 +514,7 @@ function ExamSessionContent() {
                 type="text"
                 value={answers[currentQuestion.id] || ""}
                 onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
-                className="w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={t("yourAnswer")}
               />
             )}
@@ -443,14 +524,14 @@ function ExamSessionContent() {
               <textarea
                 value={answers[currentQuestion.id] || ""}
                 onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
-                rows={6}
-                className="w-full border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                rows={4}
+                className="w-full border rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                 placeholder={t("writeAnswer")}
               />
             )}
 
             {/* Navigation */}
-            <div className="flex justify-end mt-10 pt-6 border-t">
+            <div className="flex justify-end mt-6 sm:mt-10 pt-4 sm:pt-6 border-t">
               {currentIndex < questions.length - 1 ? (
                 <Button
                   variant="primary"

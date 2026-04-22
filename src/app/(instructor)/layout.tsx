@@ -2,7 +2,7 @@
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { SessionProvider } from "next-auth/react";
-import { LayoutDashboard, FileText, HelpCircle } from "lucide-react";
+import { LayoutDashboard, FileText, HelpCircle, UserCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 
 export default function InstructorLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,7 @@ export default function InstructorLayout({ children }: { children: React.ReactNo
     { label: t("dashboard"), href: "/instructor/dashboard", icon: LayoutDashboard },
     { label: t("exams"), href: "/instructor/exams", icon: FileText },
     { label: "Banque de questions", href: "/instructor/questions", icon: HelpCircle },
+    { label: t("enrollmentRequests"), href: "/instructor/enrollments", icon: UserCheck },
   ];
 
   return (

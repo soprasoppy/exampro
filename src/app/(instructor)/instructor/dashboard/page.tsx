@@ -53,7 +53,18 @@ export default function InstructorDashboard() {
   useEffect(() => {
     fetch("/api/instructor/dashboard")
       .then((r) => r.json())
-      .then(setData)
+      .then((d) => {
+        setData({
+          totalExams: d.totalExams ?? 0,
+          totalQuestions: d.totalQuestions ?? 0,
+          totalSessions: d.totalSessions ?? 0,
+          completedSessions: d.completedSessions ?? 0,
+          avgScore: d.avgScore ?? 0,
+          activeExams: d.activeExams ?? [],
+          recentActivity: d.recentActivity ?? [],
+          weakQuestions: d.weakQuestions ?? [],
+        });
+      })
       .finally(() => setLoading(false));
   }, []);
 

@@ -40,9 +40,22 @@ export default function DashboardPage() {
       router.push("/admin");
       return;
     }
-    fetch("/api/exams")
-      .then((r) => r.json())
-      .then(setExams)
+    // Charger les examens et les inscriptions
+    Promise.all([
+      fetch("/api/exams").then((r) => r.json()),
+      fetch("/api/enrollments").then((r) => r.ok ? r.json() : []),
+    ])
+      .then(([allExams, enrollments]) => {
+        const enrollmentList = Array.isArray(enrollments) ? enrollments : [];
+        // Filtrer: ne montrer que les examens approuves
+        const approvedExamIds = new Set(
+          enrollmentList
+            .filter((e: { status: string }) => e.status === "APPROVED")
+            .map((e: { examId: string }) => e.examId)
+        );
+        const filteredExams = (Array.isArray(allExams) ? allExams : []).filter((exam: Exam) => approvedExamIds.has(exam.id));
+        setExams(filteredExams);
+      })
       .finally(() => setLoading(false));
   }, [session, router]);
 

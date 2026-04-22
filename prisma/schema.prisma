@@ -44,10 +44,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  createdExams  Exam[]         @relation("ExamCreator")
+  createdExams  Exam[]           @relation("ExamCreator")
   sessions      ExamSession[]
-  comments      ExamComment[]  @relation("InstructorComments")
+  comments      ExamComment[]    @relation("InstructorComments")
   auditLogs     AuditLog[]
+  enrollments   ExamEnrollment[]
 
   @@map("users")
 }
@@ -71,10 +72,11 @@ model Exam {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  createdBy       User           @relation("ExamCreator", fields: [createdById], references: [id])
+  createdBy       User             @relation("ExamCreator", fields: [createdById], references: [id])
   questions       Question[]
   sessions        ExamSession[]
   comments        ExamComment[]
+  enrollments     ExamEnrollment[]
 
   @@map("exams")
 }
@@ -155,6 +157,27 @@ model ExamComment {
   user      User         @relation("InstructorComments", fields: [userId], references: [id])
 
   @@map("exam_comments")
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ExamEnrollment {
+  id        String           @id @default(cuid())
+  userId    String
+  examId    String
+  status    EnrollmentStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id])
+  exam      Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, examId])
+  @@map("exam_enrollments")
 }
 
 model AuditLog {

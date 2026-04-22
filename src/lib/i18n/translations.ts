@@ -175,6 +175,45 @@ export const translations = {
     noCertificate: "Aucun certificat pour le moment",
     noCertificateDesc: "Vos certificats apparaitront ici apres avoir reussi un examen",
 
+    // Profile
+    myProfile: "Mon profil",
+    profileSubtitle: "Gerez vos informations personnelles",
+    accountInfo: "Informations du compte",
+    memberSince: "Membre depuis",
+    changePassword: "Changer le mot de passe",
+    currentPassword: "Mot de passe actuel",
+    newPassword: "Nouveau mot de passe",
+    profileUpdated: "Profil mis a jour avec succes",
+    passwordChanged: "Mot de passe modifie avec succes",
+
+    // Session exit
+    exitSessionTitle: "Quitter la session ?",
+    exitSessionMessage: "Vous avez une session d'examen en cours. Voulez-vous continuer ou arreter ?",
+    continueSession: "Continuer",
+    stopSession: "Arreter la session",
+
+    // Catalog & Enrollments
+    examCatalog: "Catalogue d'examens",
+    examCatalogSubtitle: "Parcourez les examens disponibles et demandez votre inscription",
+    filters: "Filtres",
+    all: "Tous",
+    clearFilters: "Effacer les filtres",
+    noSearchResult: "Aucun examen ne correspond a votre recherche",
+    requestExam: "Demander l'acces",
+    enrollmentPending: "Demande en attente",
+    enrollmentApproved: "Acces approuve",
+    enrollmentRejected: "Demande refusee",
+    enrollmentRequests: "Demandes d'inscription",
+    enrollmentRequestsSubtitle: "Gerez les demandes d'acces aux examens des candidats",
+    pendingRequests: "En attente",
+    processedRequests: "Traitees",
+    requestsExam: "Demande l'examen",
+    approve: "Approuver",
+    reject: "Refuser",
+    approved: "Approuve",
+    rejected: "Refuse",
+    noEnrollmentRequest: "Aucune demande d'inscription",
+
     // True/False
     true: "Vrai",
     false: "Faux",
@@ -354,6 +393,45 @@ export const translations = {
     certificatesSubtitle: "Find here all your exam certificates",
     noCertificate: "No certificate yet",
     noCertificateDesc: "Your certificates will appear here after passing an exam",
+
+    // Profile
+    myProfile: "My profile",
+    profileSubtitle: "Manage your personal information",
+    accountInfo: "Account information",
+    memberSince: "Member since",
+    changePassword: "Change password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    profileUpdated: "Profile updated successfully",
+    passwordChanged: "Password changed successfully",
+
+    // Session exit
+    exitSessionTitle: "Leave the session?",
+    exitSessionMessage: "You have an exam session in progress. Do you want to continue or stop?",
+    continueSession: "Continue",
+    stopSession: "Stop session",
+
+    // Catalog & Enrollments
+    examCatalog: "Exam catalog",
+    examCatalogSubtitle: "Browse available exams and request access",
+    filters: "Filters",
+    all: "All",
+    clearFilters: "Clear filters",
+    noSearchResult: "No exam matches your search",
+    requestExam: "Request access",
+    enrollmentPending: "Request pending",
+    enrollmentApproved: "Access approved",
+    enrollmentRejected: "Request rejected",
+    enrollmentRequests: "Enrollment requests",
+    enrollmentRequestsSubtitle: "Manage candidate exam access requests",
+    pendingRequests: "Pending",
+    processedRequests: "Processed",
+    requestsExam: "Requests exam",
+    approve: "Approve",
+    reject: "Reject",
+    approved: "Approved",
+    rejected: "Rejected",
+    noEnrollmentRequest: "No enrollment requests",
 
     // True/False
     true: "True",

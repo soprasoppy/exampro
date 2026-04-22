@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { signOut, useSession } from "next-auth/react";
 import { LogOut, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import { LangSwitcher } from "@/components/ui/lang-switcher";
 import { useI18n } from "@/lib/i18n/context";
+import { Modal } from "@/components/ui/modal";
 
 interface NavItem {
   label: string;
@@ -23,9 +24,32 @@ interface SidebarProps {
 
 export function Sidebar({ items, title }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
+  // Verifier s'il y a une session d'examen en cours
+  useEffect(() => {
+    if (session?.user) {
+      fetch("/api/sessions/active")
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.sessionId) setActiveSessionId(data.sessionId);
+          else setActiveSessionId(null);
+        })
+        .catch(() => setActiveSessionId(null));
+    }
+  }, [session, pathname]);
+
+  function handleTitleClick(e: React.MouseEvent) {
+    if (activeSessionId) {
+      e.preventDefault();
+      setShowExitModal(true);
+    }
+  }
 
   function isActive(href: string) {
     if (href === "/admin" || href === "/dashboard" || href === "/instructor/exams") {
@@ -37,7 +61,7 @@ export function Sidebar({ items, title }: SidebarProps) {
   const navContent = (
     <>
       <div className="p-6 border-b border-white/10">
-        <Link href="/" className="text-xl font-bold text-white tracking-tight">{title}</Link>
+        <Link href="/" onClick={handleTitleClick} className="text-xl font-bold text-white tracking-tight">{title}</Link>
         <p className="text-xs text-brand-mint/60 mt-0.5">Ashane & Junia Consulting</p>
       </div>
 
@@ -116,6 +140,38 @@ export function Sidebar({ items, title }: SidebarProps) {
       <aside className="hidden lg:flex w-64 bg-brand-green min-h-screen flex-col shrink-0">
         {navContent}
       </aside>
+
+      {/* Modal confirmation sortie de session */}
+      <Modal
+        open={showExitModal}
+        onClose={() => setShowExitModal(false)}
+        title={t("exitSessionTitle")}
+      >
+        <p className="text-sm text-gray-600 mb-6">{t("exitSessionMessage")}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => {
+              setShowExitModal(false);
+              if (activeSessionId) {
+                router.push(`/dashboard/exam/${activeSessionId}?resume=true`);
+              }
+            }}
+            className="px-4 py-2 bg-brand-green text-white rounded-lg text-sm font-medium hover:bg-[#153728] transition-colors"
+          >
+            {t("continueSession")}
+          </button>
+          <button
+            onClick={() => {
+              setShowExitModal(false);
+              setActiveSessionId(null);
+              router.push("/");
+            }}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+          >
+            {t("stopSession")}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

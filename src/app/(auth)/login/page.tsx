@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect, Suspense } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -34,10 +34,18 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
+  const { data: session, status } = useSession();
   const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Si l'utilisateur est deja connecte, le deconnecter pour forcer la reconnexion
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      signOut({ redirect: false });
+    }
+  }, [status, session]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
